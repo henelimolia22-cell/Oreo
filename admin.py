@@ -89,6 +89,10 @@ class AdminPanel(tk.Tk):
 
         tk.Button(btn_frame, text="Manage Users", bg="#1E90FF", fg="white",
                   font=("Arial", 12, "bold"), command=self.open_users_window).grid(row=0, column=3, padx=10)
+        
+        tk.Button(btn_frame, text="Manage Customers", bg="#9932CC", fg="white",
+          font=("Arial", 12, "bold"), command=self.open_customer_window).grid(row=0, column=5, padx=10)
+
 
         tk.Button(btn_frame, text="Insights Dashboard", bg="#2E8B57", fg="white",
                   font=("Arial", 12, "bold"), command=self.open_insights_window).grid(row=0, column=4, padx=10)
@@ -529,3 +533,86 @@ class AdminPanel(tk.Tk):
 if __name__ == "__main__":
     app = AdminPanel()
     app.mainloop()
+
+
+    def open_customer_window(self):
+        win = tk.Toplevel(self)
+        win.title("Customer Management")
+        win.geometry("1000x600")
+        win.config(bg="white")
+
+        # Search
+        search_frame = tk.Frame(win)
+        search_frame.pack(pady=10)
+        tk.Label(search_frame, text="Search by Name or ID: ").pack(side="left")
+        search_entry = tk.Entry(search_frame)
+        search_entry.pack(side="left")
+        tk.Button(search_frame, text="Search", command=lambda: search(search_entry.get())).pack(side="left")
+
+        # Table
+        cols = ("ID", "Name", "Email", "Phone", "Status", "Total Spent")
+        tree = ttk.Treeview(win, columns=cols, show="headings", height=18)
+
+        for c in cols:
+            tree.heading(c, text=c)
+        tree.pack(fill="both", expand=True)
+
+        # Buttons
+        button_frame = tk.Frame(win)
+        button_frame.pack(pady=10)
+
+        tk.Button(button_frame, text="Add Customer", command=lambda: add_customer()).pack(side="left", padx=5)
+        tk.Button(button_frame, text="Update Customer", command=lambda: update_customer()).pack(side="left", padx=5)
+        tk.Button(button_frame, text="Delete Customer", command=lambda: delete_customer()).pack(side="left", padx=5)
+        tk.Button(button_frame, text="Refresh", command=lambda: load_customers()).pack(side="left", padx=5)
+
+        # Load default data
+        def load_customers():
+            for i in tree.get_children():
+                tree.delete(i)
+            db = connect_db()
+            cur = db.cursor()
+            cur.execute("SELECT id, name, email, phone, total_spent FROM customers")
+            rows = cur.fetchall()
+            db.close()
+
+            for r in rows:
+                cid, name, email, phone, spent = r
+                status = get_customer_tier(spent)
+                tree.insert("", tk.END, values=(cid, name, email, phone, status, spent))
+
+        def search(value):
+            for i in tree.get_children():
+                tree.delete(i)
+            db = connect_db()
+            cur = db.cursor()
+            cur.execute("SELECT id, name, email, phone, total_spent FROM customers WHERE name LIKE %s OR id = %s",
+                        (f"%{value}%", value))
+            rows = cur.fetchall()
+            db.close()
+
+            for r in rows:
+                cid, name, email, phone, spent = r
+                status = get_customer_tier(spent)
+                tree.insert("", tk.END, values=(cid, name, email, phone, status, spent))
+
+        def get_customer_tier(total_spent):
+            total_spent = float(total_spent)
+            if total_spent >= 5000:
+                return "GOLD"
+            elif total_spent >= 2000:
+                return "SILVER"
+            else:
+                return "BRONZE"
+
+        def add_customer():
+            messagebox.showinfo("TODO", "You will implement Add Customer form here.")
+
+        def update_customer():
+            messagebox.showinfo("TODO", "You will implement Update Customer form here.")
+
+        def delete_customer():
+            messagebox.showinfo("TODO", "You will implement Delete Customer here.")
+
+        load_customers()
+
